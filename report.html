@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:include="header :: commonHeader(boot)">
+    <meta charset="utf-8"/>     
+</head>
+<!-- JEDate -->
+<link type="text/css" rel="stylesheet" th:href="@{/jedate/skin/jedate.css}"></link>
+<script type="text/javascript" th:src="@{/jedate/jedate.js}"></script>
+<link type="text/css" rel="stylesheet" th:href="@{/plugins/jquery-ztree/css/metroStyle/metroStyle.css}"></link>
+<script type="text/javascript" th:src="@{/plugins/jquery-ztree/js/jquery.ztree.all.js}"></script>
+<script th:src="@{/plugins/echarts/echarts.js}"></script>
+<style>
+    body{font-family:"微软雅黑";}
+    .ui-dialog{z-index:10000;}
+    .ui-widget-overlay{z-index:9999}
+    .dataTables_length{float:right;}
+    .container-fluid {
+       max-width: 98%;
+    }
+    .btn-xs{
+        padding:0 8px;
+        font-size:12px;
+    }
+    .ui-dialog .ui-dialog-content{
+        padding:5px 0;
+    }
+    .data-view{
+        height:100%;
+        border:1px solid #ddd;
+    }
+    .data-view .left{
+        float:left;
+        width:25.0%;
+        height:100%;
+        overflow:auto;
+        border-right:1px solid #ddd;
+    }
+    .data-view .right{
+        float:left;
+        width:75.0%;
+        height:100%;
+        overflow:auto;
+    }
+    .data-view .title{
+        font-weight:bold;
+        padding:5px 15px;
+        border-bottom:2px solid #ddd;
+    }
+    .right .title{
+        border-bottom:0;
+        word-break:break-all;
+    }
+    .data-view .step{
+        padding:3px 15px;
+        font-size:12px;
+        border-bottom:1px solid #ddd;
+    }
+    .step a{
+        color:#337ab7;
+    }
+    .checked{
+        float:right;
+        color:#E57105;
+    }
+    .subTitle,.subTitle2,.result{
+        padding:5px 15px;
+    }
+    .subTitle span{
+        color:#fff; 
+        padding:3px 10px;
+        margin-right:10px;
+        font-size:12px;
+        border-radius:3px;
+    }
+    .subTitle2 span{
+        padding:3px 10px;
+        margin-right:10px;
+        font-size:12px;
+        border-radius:3px;
+    }
+    .result p{
+        border:1px dashed #ddd;
+        border-radius:5px;
+        padding:10px;
+        text-indent:24px;
+        word-break:break-all;
+    }
+    .result .screenshot{
+        text-align:center;
+        border:0;
+    }
+    .screenshot img{
+        width:40%;
+    }
+    
+    .title1 {
+    font-family: verdana,arial,sans-serif;
+	font-size:25px;
+	margin-left:10px;
+    }
+    .module {
+    font-family: verdana,arial,sans-serif;
+	font-size:20px;
+	margin-left:10px;
+    }
+    
+    table.gridtable {
+	font-family: verdana,arial,sans-serif;
+	font-size:20px;
+	color:#333333;
+	border-width: 1px;
+	border-color: #666666;
+	border-collapse: collapse;
+	margin-left:10px;
+	}
+	table.gridtable th {
+	border-width: 1px;
+	padding: 8px;
+	border-style: solid;
+	border-color: #666666;
+	background-color: #dedede;
+	}
+	table.gridtable td {
+	border-width: 1px;
+	padding: 8px;
+	border-style: solid;
+	border-color: #666666;
+	background-color: #ffffff;
+	}
+	.table > tbody > tr > th, .table > tfoot > tr > th, .table > thead > tr > th{padding:11px 8px 9px;text-align:center;}
+</style>
+<body >
+        <div th:include="nav::mobilenav"></div>
+        <div class="wrapper">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card-box table-responsive">
+                            <div id="toolbar" class="pull-left col-sm-12 col-md-6">
+                                 <div class="form-group row">
+                                   <!--  <div class="col-md-6" style="padding:0">
+                                        <div class="input-append date form_datetime">
+										    <input id="qusername" type="text" class="form-control" placeholder="--请选择执行时间--" data-parsley-required-message="请选择执行时间" required  readonly>
+										</div>
+                                    </div> -->
+                                    <div class="col-md-6 btn-group">
+                                        <a class="btn btn-danger waves-light waves-effect" title='导出' id="export" href="javascript:;"><i class="fa fa-export"></i>导出</a>
+<!--                                         <a class="btn btn-danger waves-light waves-effect" title='删除' id="delete"  href="javascript:;" ><i class="fa fa-user-times"></i>删除</a>
+ -->                                    </div>
+                                </div> 
+                            </div>
+                            <table id="example" class="table table-striped table-bordered">
+                            </table>
+                        </div>
+                    </div>
+                </div> <!-- end row -->
+            </div> <!-- end container -->
+        </div>
+        <div id="tips"></div>
+        <div id="confirm"></div>
+        <div id="detail">
+            <div class="data-view">
+	            <div class="left">
+	            	<input type="hidden" id="treemoudleid" />
+	            	<input type="hidden" id="treelunci" />
+	            	<div  id="Tree" class="ztree"></div>
+	            </div>
+	            <div class="right"></div>
+            </div>
+        </div>
+        <!-- end wrapper -->
+        <!-- Footer -->
+        <div th:include="footer::mobilefooter"></div>
+        <!-- End Footer -->
+        <script type="text/javascript">
+        
+        var setting = 
+        {
+            data: {
+                simpleData: {
+                    enable: true,
+                    idKey: "id",
+                    pIdKey: "pId",
+                    rootPId: 0
+                },
+                key:{
+                    nameArray:["name"],
+                    nameFormat:"%s"
+                }
+            },
+            async: {    //ztree异步请求数据 
+                enable: true, 
+                url: "/reportTreeDate",//请求action方法 
+                otherParam:{'moudleid':function (){return $('#treemoudleid').val()},'lunci':function (){return $('#treelunci').val()}}
+            },
+            check: {
+                enable: false
+            },
+            view: {
+                dblClickExpand : true,  
+                selectedMulti : false,
+                //fontCss:getFont,
+                showIcon:true
+            },
+            edit:{
+                enable: false
+            },
+            callback:{ 
+                onClick: zTreeOnClick
+            }
+        };
+        
+        
+        function chart(lunci,mid){
+            var data2,data3;
+            $.ajax({
+                type : "get",
+                url : "/getModuleStatusCount",
+                async: false,
+                data:{'lunci':lunci,'mid':mid},
+                success : function(result) {
+                    data2=result.successList;
+                    data3=result.failList;
+                }
+            })
+            var dom2 = document.getElementById("chart");
+            var myChart2 = echarts.init(dom2);
+            var option2 = {
+            	    title : {
+            	        text: "模块成功失败占比",
+            	        x:'center'
+            	    },
+            	    tooltip : {
+            	        trigger: 'item',
+            	        formatter: "{a} <br/>{b} : {c}个 ({d}%)"
+            	    },
+            	    legend: {
+            	        orient: 'vertical',
+            	        left: 'left',
+            	        data: ['成功','失败']
+            	    },
+            	    color:['#FF9F7F', '#37A2DA'],
+            	    series : [
+            	        {
+            	            name: '版本',
+            	            type: 'pie',
+            	            radius : '55%',
+            	            center: ['50%', '60%'],
+            	             data:[
+            	                {value:data2, name:'成功'},
+            	                {value:data3, name:'失败'}
+            	            ], 
+            	            itemStyle: {
+            	                emphasis: {
+            	                    shadowBlur: 10,
+            	                    shadowOffsetX: 0,
+            	                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+            	                }
+            	            }
+            	        }
+            	    ]
+            	};
+            if (option2 && typeof option2 === "object") {
+                myChart2.setOption(option2, true);
+            }
+        }
+        
+        function chart2(dbId,lunci,mid){
+            var data2,data3;
+            $.ajax({
+                type : "get",
+                url : "/getModuleCaseStatusCount",
+                async: false,
+                data:{'moduleid':dbId,'lunci':lunci,'mid':mid},
+                success : function(result) {
+                    data2=result.successList;
+                    data3=result.failList;
+                }
+            })
+            var dom2 = document.getElementById("chart2");
+            var myChart2 = echarts.init(dom2);
+            var option2 = {
+            	    title : {
+            	        text: "模块下用例成功失败占比",
+            	        x:'center'
+            	    },
+            	    tooltip : {
+            	        trigger: 'item',
+            	        formatter: "{a} <br/>{b} : {c}个 ({d}%)"
+            	    },
+            	    legend: {
+            	        orient: 'vertical',
+            	        left: 'left',
+            	        data: ['成功','失败']
+            	    },
+            	    color:['#FF9F7F', '#37A2DA'],
+            	    series : [
+            	        {
+            	            name: '版本',
+            	            type: 'pie',
+            	            radius : '55%',
+            	            center: ['50%', '60%'],
+            	             data:[
+            	                {value:data2, name:'成功'},
+            	                {value:data3, name:'失败'}
+            	            ], 
+            	            itemStyle: {
+            	                emphasis: {
+            	                    shadowBlur: 10,
+            	                    shadowOffsetX: 0,
+            	                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+            	                }
+            	            }
+            	        }
+            	    ]
+            	};
+            if (option2 && typeof option2 === "object") {
+                myChart2.setOption(option2, true);
+            }
+        }
+        
+        
+        function chart3(dbId,lunci,caseid){
+            var data2,data3;
+            $.ajax({
+                type : "get",
+                url : "/getCaseStepStatusCount",
+                async: false,
+                data:{'moduleid':dbId,'lunci':lunci,'caseid':caseid},
+                success : function(result) {
+                    data2=result.successList;
+                    data3=result.failList;
+                }
+            })
+            var dom2 = document.getElementById("chart3");
+            var myChart2 = echarts.init(dom2);
+            var option2 = {
+            	    title : {
+            	        text: "用例下步骤成功失败占比",
+            	        x:'center'
+            	    },
+            	    tooltip : {
+            	        trigger: 'item',
+            	        formatter: "{a} <br/>{b} : {c}个 ({d}%)"
+            	    },
+            	    legend: {
+            	        orient: 'vertical',
+            	        left: 'left',
+            	        data: ['成功','失败']
+            	    },
+            	    color:['#FF9F7F', '#37A2DA'],
+            	    series : [
+            	        {
+            	            name: '版本',
+            	            type: 'pie',
+            	            radius : '55%',
+            	            center: ['50%', '60%'],
+            	             data:[
+            	                {value:data2, name:'成功'},
+            	                {value:data3, name:'失败'}
+            	            ], 
+            	            itemStyle: {
+            	                emphasis: {
+            	                    shadowBlur: 10,
+            	                    shadowOffsetX: 0,
+            	                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+            	                }
+            	            }
+            	        }
+            	    ]
+            	};
+            if (option2 && typeof option2 === "object") {
+                myChart2.setOption(option2, true);
+            }
+        }
+        
+        //树点击事件    
+        function zTreeOnClick(event, treeId, treeNode){
+        	$('.data-view .right').empty();
+        	//展示整合信息
+        	if(treeNode.treetype=='title'){
+        		$("#detail").parents('.left').find('.checked').remove();
+            	var views='';
+            	views+='<p class="title1">'+treeNode.name+':</p>';
+            	views+='<div class="module">';
+            	views+='<p>当前轮次:'+$('#treelunci').val()+'</p></div>';
+            	views+='<div><table class="gridtable"> <tr><th>所含模块</th><th>执行开始时间</th> <th>执行结束时间</th> <th>执行通过率</th><tr> ';
+            	for(var i=0;i<treeNode.children.length;i++){
+            		if(treeNode.children[i].statusnum=='100.0%'){
+                		style='bg-success';
+                	}else{
+                		style='bg-danger';
+                	}
+            		views+='<tr><td>'+treeNode.children[i].name+'</td>  <td>'+treeNode.children[i].startdate+'</td> <td>'+treeNode.children[i].enddate+'</td> <td class="data '+style+'">'+treeNode.children[i].statusnum+'</td> </tr>';
+            	}
+            	views+='</table></div>';
+            	views+='<div class="row" style="margin-bottom:10px;">';
+            	views+='       <div class="row">';
+            	views+='           <div class="col-md-6">';
+            	views+='             <div class="card-box">';
+            	views+='                 <div id="chart" style="height:240px"></div>';
+            	views+='             </div>';
+            	views+='         </div>';
+            	views+='      </div>';
+            	views+='</div>';
+            	$('.data-view .right').empty();
+            	$('.data-view .right').append(views);
+            	chart($('#treelunci').val(),treeNode.mid);
+        	}
+        	//点击模块展示结果
+        	else if(treeNode.treetype=='module'){
+        		$("#detail").parents('.left').find('.checked').remove();
+            	//$("#detail").append('<span class="checked glyphicon glyphicon-check"></span>');
+            	var views='';
+            	views+='<p class="title1">模块名称:'+treeNode.name+'</p>';
+            	/* views+='<div class="module"><p>执行开始时间:</p>';
+            	views+='<p>执行结束时间:</p>'; */
+            	views+='<div class="module">';
+            	views+='<p>当前轮次:'+$('#treelunci').val()+'</p></div>';
+            	views+='<div><table class="gridtable"> <tr><th>所含用例</th> <th>用例描述</th> <th>执行开始时间</th> <th>执行结束时间</th> <th>执行结果</th><tr> ';
+            	for(var i=0;i<treeNode.children.length;i++){
+            		if(treeNode.children[i].status=='成功'){
+                		style='bg-success';
+                	}else{
+                		style='bg-danger';
+                	}
+            		views+='<tr><td>'+treeNode.children[i].name+'</td> <td>'+treeNode.children[i].remark+'</td> <td>开始时间暂未填写</td> <td>结束时间暂未填写</td> <td class="data '+style+'">'+treeNode.children[i].status+'</td> </tr>';
+            	}
+            	views+='</table></div>';
+            	views+='<div class="row" style="margin-bottom:10px;">';
+            	views+='       <div class="row">';
+            	views+='           <div class="col-md-6">';
+            	views+='             <div class="card-box">';
+            	views+='                 <div id="chart2" style="height:240px"></div>';
+            	views+='             </div>';
+            	views+='         </div>';
+            	views+='      </div>';
+            	views+='</div>';
+            	$('.data-view .right').empty();
+            	$('.data-view .right').append(views);
+            	chart2(treeNode.dbId,$('#treelunci').val(),treeNode.mid);
+        		
+        	}
+        	//点击用例展示结果
+        	else if(treeNode.treetype=='case'){
+        		$("#detail").parents('.left').find('.checked').remove();
+            	//$("#detail").append('<span class="checked glyphicon glyphicon-check"></span>');
+            	var views='',style='';
+            	views+='<p class="title1">用例名称:'+treeNode.name+'</p>';
+            	views+='<div class="module"><p>用例描述:'+treeNode.remark+'</p>';
+            	views+='<p>用例类型:'+treeNode.androidorios+'</p>';
+            	/* views+='<p>执行开始时间:</p>';
+            	views+='<p>执行结束时间:</p>'; */
+            	if(treeNode.status=='成功'){
+            		views+='<p>执行结果:<span class="data bg-success">'+treeNode.status+'</span></p>';
+            	}
+            	else{
+            		views+='<p>执行结果:<span class="data bg-danger">'+treeNode.status+'</span></p>';
+            	}
+            	views+='<p>成功:'+treeNode.steptruenum+'</p>';
+            	views+='<p>失败:'+treeNode.stepfalsenum+'</p></div>';
+            	/* views+='<p class="subTitle2"> <span>所含步骤</span>  <span>执行开始时间</span> <span>执行结束时间</span> <span>执行结果</span> </p>';
+            	
+            	for(var i=0;i<treeNode.children.length;i++){
+            		if(treeNode.children[i].status=='成功'){
+                		style='bg-success';
+                	}else{
+                		style='bg-danger';
+                	}
+            		views+='<p class="subTitle2"><span>'+treeNode.children[i].name+'</span> <span>开始时间暂未填写</span> <span>结束时间暂未填写</span> <span class="data '+style+'">'+treeNode.children[i].status+'</span></p>';
+            	} */
+            	views+='<div class="row" style="margin-bottom:10px;">';
+            	views+='       <div class="row">';
+            	views+='           <div class="col-md-6">';
+            	views+='             <div class="card-box">';
+            	views+='                 <div id="chart3" style="height:240px"></div>';
+            	views+='             </div>';
+            	views+='         </div>';
+            	views+='      </div>';
+            	views+='</div>';
+            	$('.data-view .right').empty();
+            	$('.data-view .right').append(views);
+            	chart3(treeNode.getParentNode().dbId,$('#treelunci').val(),treeNode.id);
+        	}
+        	//点击步骤集展示结果
+        	else if(treeNode.treetype=='steplist'){
+        		$("#detail").parents('.left').find('.checked').remove();
+            	//$("#detail").append('<span class="checked glyphicon glyphicon-check"></span>');
+            	var views='',style='';
+            	views+='<p class="title1">步骤集名称:'+treeNode.name+'</p>';
+            	views+='<div class="module"><p></p>';
+            	/* views+='<p>执行开始时间:</p>';
+            	views+='<p>执行结束时间:</p>'; */
+            	if(treeNode.status=='成功'){
+            		views+='<p>执行结果:<span class="data bg-success">'+treeNode.status+'</span></p>';
+            	}
+            	else{
+            		views+='<p>执行结果:<span class="data bg-danger">'+treeNode.status+'</span></p>';
+            	}
+            	views+='<p>成功:'+treeNode.steptruenum+'</p>';
+            	views+='<p>失败:'+treeNode.stepfalsenum+'</p></div>';
+            	$('.data-view .right').empty();
+            	$('.data-view .right').append(views);
+        	}
+        	else{
+        		//点击步骤展示结果
+        		$("#detail").parents('.left').find('.checked').remove();
+            	//$("#detail").append('<span class="checked glyphicon glyphicon-check"></span>');
+            	var views='',style='';
+            	if(treeNode.status=='成功'){
+            		style='bg-success';
+            	}else{
+            		style='bg-danger';
+            	}
+            	views+='<p class="title">'+treeNode.name+'<i class="glyphicon glyphicon-arrow-right" style="margin:0 5px;"></i>'+treeNode.casenode+'</p>';
+            	views+='<p class="title">执行开始时间:'+treeNode.startdate+'</p>';
+            	views+='<p class="title">执行结束时间:'+treeNode.enddate+'</p>';
+            	views+='<p class="subTitle">执行方法:<span class="data '+style+'">'+treeNode.stepmethod+'</span>执行结果:<span class="status '+style+'">'+treeNode.status+'</span></p>';
+            	views+='<div class="result"><p><span style="font-weight:bold;">测试结果：</span>'+treeNode.stepresult+'</p><p class="screenshot"><img src="/getImage?photopath='+encodeURI(treeNode.screenimagepath)+'"></p></div>';
+            	$('.data-view .right').empty();
+            	$('.data-view .right').append(views);
+        	}
+        }
+        
+        $(document).ready(function() {
+            var subTable;
+            /* $("#query").click(function(){
+                 table.ajax.reload();
+            });
+            
+            jeDate("#qusername",{
+            	format:"YYYY/MM/DD", //日期格式
+            	range:" - ",
+                minDate:"1900-01-01 00:00:00", //最小日期
+                maxDate:"2099-12-31 23:59:59", //最大日期
+                isinitVal:false, //是否初始化时间
+                isTime:true, //是否开启时间选择
+                isClear:true, //是否显示清空
+                festival:false, //是否显示节日
+                zIndex:999,  //弹出层的层级高度
+                marks:null, //给日期做标注
+                choosefun:function(val) {},  //选中日期后的回调
+                clearfun:function(val) {},   //清除日期后的回调
+                okfun:function(val) {}       //点击确定后的回调
+            }); */
+            
+            $("#export").click(function(){
+            	var moduleids=getSelections('example');
+            	if(moduleids.length>1){
+            		 $('#tips').dialog({
+                         title:'提示',
+                         open:function(){
+                             $(this).html('<p><span class="ui-icon ui-icon-circle-check" style="float:left; margin:0 7px 0 0;"></span>请选择一条进行导出</p>')
+                         },
+                         buttons:[
+                         {
+                             text: "确定",
+                             click: function() {
+                                 $(this).dialog( "close" );
+                             }   
+                         }]
+                     })
+                     $('#tips').dialog('open')
+            	}
+            	else{
+            		$( "#confirm").dialog({
+                        title:'提示',
+                        modal: true,
+                        open:function(){ 
+                            if(moduleids.length){
+                                $(this).html('<p>确定导出？</p>');
+                            }else{
+                                $(this).html('<p>请选择需要导出的数据！</p>');
+                            }
+                        },
+                        buttons:
+                        [
+                            {
+                                text: "确定",
+                                click: function() {
+                                    if(moduleids.length){
+                                    	location.href=encodeURI("/exportReport?moduleids="+moduleids);
+                                    	$('#confirm').dialog('close') ;
+                                    }else{
+                                        $(this).dialog('close')
+                                    }
+                                }
+                            },
+                            {
+                                text: "取消",
+                                click: function() {
+                                    $(this).dialog('close')
+                                }
+                            }
+                        ]
+                    })
+                    $( "#confirm" ).dialog( "open" );
+            	}
+            });
+            
+            $("#delete").click(function(event){
+                var ids=getSelections('example');
+                $( "#confirm").dialog({
+                    title:'提示',
+                    modal: true,
+                    open:function(){ 
+                        if(ids.length){
+                            $(this).html('<p>确定删除？</p>');
+                        }else{
+                            $(this).html('<p>请选择需要删除的数据！</p>');
+                        }
+                    },
+                    buttons:
+                    [
+                        {
+                            text: "确定",
+                            click: function() {
+                                if(ids.length){
+                                    $.ajax({
+                                        type : "post",
+                                        url : "/removeMobileCase",
+                                        data:{ids: ids.toString()},
+                                        async: false,
+                                        success : function(data) {
+                                            $('#confirm').dialog('close') 
+                                            $('#tips').dialog({
+                                                title:'提示',
+                                                open:function(){
+                                                    $(this).html('<p><span class="ui-icon ui-icon-circle-check" style="float:left; margin:0 7px 0 0;"></span>'+data.msg+'</p>')
+                                                },
+                                                buttons:[
+                                                {
+                                                    text: "确定",
+                                                    click: function() {
+                                                        $(this).dialog( "close" );
+                                                        table.ajax.reload();
+                                                    }   
+                                                }]
+                                            })
+                                            $('#tips').dialog('open')
+                                        }
+                                    });
+                                }else{
+                                    $(this).dialog('close')
+                                }
+                            }
+                        },
+                        {
+                            text: "取消",
+                            click: function() {
+                                $(this).dialog('close')
+                            }
+                        }
+                    ]
+                })
+                $( "#confirm" ).dialog( "open" );
+            });
+            
+            var table = $('#example').DataTable( {
+                language: {
+                    url: "plugins/datatables/chinese/Chinese.json"
+                },
+                scrollY:($('.wrapper').height()-205)>250?($('.wrapper').height()-205):250, 
+                processing:true,
+                serverSide:true,
+                pageLength: 10,  //首次加载的数据条数
+                ordering: false, //排序操作在服务端进行，所以可以关了。
+                paging:true,
+                pagingType: "full_numbers",
+                autoWidth: false,
+                searching: false,//禁用搜索
+                ajax:{
+                    type: "get",
+                    url:"/mobileCaseResultListJson",
+                    data: function (d) {
+                        //获得提问人搜索条件
+                       // var name = $("#qusername").val();
+                        var param = {};
+                        param.draw = d.draw;
+                        param.start = table.page()+1;
+                        param.length = d.length;
+                        //param.time = name;
+                        //给请求添加条件
+                        /* if(name!=undefined){
+                            param.name = name;
+                        } */
+                        return param;//自定义需要传递的参数。
+                    }
+                },
+                columns: [
+                	{
+                        sClass:'details-control',
+                        orderable:false,
+                        data:null,
+                        defaultContent: '',
+                        width:30
+                    }, 
+                    {
+                        sClass: "text-center",
+                        data: "moduleid",
+                        title:"<input type='checkbox'  class='checkAll' />",
+                        render: function (data, type, full, meta) {
+                            return '<input type="checkbox"  class="checkchild"  id="checkAll" value="' + data + '" />';
+                        },
+                        bSortable: false
+                    },
+                    /* {data: "id",title:'报告ID'}, */
+                    {data: "caseids",title:'测试模块'},
+                    {data: "executedate",title:'执行时间'},
+                    /*{data: "executeuser",title:'执行人' },  */
+                    {data: "casetype",title:'用例类型'},
+                    //{data: "execdevice",title:'执行设备'},
+                    /* {data: "totalcount",title:'总计',render:function(data, type, row){
+                        if(data==null)
+                            data="";
+                            var html ='<div style="width:40px;word-wrap:break-word ;">'+data+'</div>';
+                            return html;
+                        }},
+                    {data: "totalpass",title:'通过',render:function(data, type, row){
+                        if(data==null)
+                            data="";
+                            var html ='<div style="width:40px;word-wrap:break-word ;">'+data+'</div>';
+                            return html;
+                        }},
+                    {data: "totalfail",title:'失败',render:function(data, type, row){
+                        if(data==null)
+                            data="";
+                            var html ='<div style="width:40px;word-wrap:break-word ;">'+data+'</div>';
+                            return html;
+                        }},  */
+                    /*{data: "totalerror",title:'错误'},  */
+                   /*  {data: "remark",title:'备注',render:function(data, type, row){
+                        if(data==null)
+                            data="";
+                            var html ='<div style="width:200px;word-wrap:break-word ;">'+data+'</div>';
+                            return html;
+                        }}, */
+                    /* {
+                        sClass: "details-control",
+                        data:null,
+                        title:'操作',
+                        width:60,
+                        render: function(data, type, row) {
+                            var html ='<button class="edit btn btn-instagram waves-effect waves-light btn-sm"><i class="glyphicon glyphicon-list-alt" style="margin-right:5px;"></i>详情</button>'
+                            return html;
+                       }
+                    }  */
+                ]
+             });
+            
+            function getstr(str) {
+				if(str==null||str==""){
+					return '';
+				}
+				return str;
+			}
+           
+            
+            
+            $('#example tbody').on('click', 'td.details-control', function () {
+                var data=table.row($(this).parents('tr')).data();
+                var tr = $(this).closest('tr');
+                var row = table.row( tr );
+                if ( row.child.isShown() ) {
+                    // This row is already open - close it
+                    row.child.hide();
+                    tr.removeClass('shown');
+                }
+                else {
+                    // Open this row
+                    row.child('<table class="data-view table table-bordered" style="border-top:1px solid #ddd">').show();
+                    
+                    tr.addClass('shown').next().addClass('current');
+                    subTable=$('.current').find('.data-view').DataTable({
+                        language: {
+                            url: "plugins/datatables/chinese/Chinese.json"
+                        },
+                        dom:"t",
+                        retrieve: true, 
+                        ordering: false, //排序操作在服务端进行，所以可以关了。
+                        paging:false,
+                        autoWidth: false,
+                        searching: false,//禁用搜索
+                        ajax:{
+                            type: "get",
+                            url:"/getCasenumberByMoudleid",
+                            data: function (d) {
+                                var param = {};
+                                param.moduleid = data.moduleid;
+                                return param;//自定义需要传递的参数。
+                            }
+                        },
+                        columns: [
+                            {data: "casenumber",title:'轮次'},
+                            {data: "status",title:'执行结果' },
+                            {data: "startdate",title:'执行时间' },
+                            {
+                            	sClass: "details-control2",
+                                title:'操作',
+                                render: function(data, type, row) {
+                                    var html ='<div class="btn-group"> <a class="btn btn-tumblr  waves-effect waves-light btn-sm subedit" href="javascript:;"><i class="glyphicon glyphicon-list-alt" style="margin-right:5px;"></i>查看详情</a></div>';
+                                    return html;
+                                },
+                                width:150
+                            }
+                        ]
+                    });
+                }
+            });
+            
+            
+            
+            // Add event listener for opening and closing details
+            $('#example tbody').on('click', 'td.details-control2', function () {
+               /*  var data=table.row($(this).parents('tr')).data(),
+                    caseid= $.parseJSON(data.caseids); */
+                var row = $(this).parents('.data-view').DataTable().row( $(this).parents('tr').eq(0)).data();
+                $("#treemoudleid").val(row.mid);
+                $("#treelunci").val(row.casenumber);
+                $("#detail").dialog({
+                    autoOpen: false, 
+                    width: $(window).width()-10,
+                    height:$(window).height()-10,
+                    //title:data.modulename,
+                    title:row.casenumber+"轮次结果详情",
+                    modal: true,
+                    open:function(){
+                    	$('.data-view .right').empty();
+                    	var zTree=$.fn.zTree.init($("#Tree"), setting);
+                    	
+                    	$("#detail").parents('.left').find('.checked').remove();
+                    	//$("#detail").append('<span class="checked glyphicon glyphicon-check"></span>');
+                    	var views='',style='';
+                    	style='bg-danger';
+                    	views+='<p class="title">轮次详情阐述:<i class="glyphicon glyphicon-arrow-right" style="margin:0 5px;"></i>树的结构为:模块>用例>用例步骤</p>';
+                    	views+='<p class="subTitle">步骤字体颜色为绿色:<span class="status bg-success">成功</span>红色:<span class="status '+style+'">失败</span></p>';
+                    	views+='<div class="result"><p><span style="font-weight:bold;">点击用例步骤可查看执行的具体结果信息</span></p></div>';
+                    	$('.data-view .right').empty();
+                    	$('.data-view .right').append(views);
+                    	
+                    	/* $.ajax({
+                            type : "post",
+                            url : "/findStepResultBycaseid",
+                            data:{'moduleid':row.moudleid,'modulenumber':row.casenumber},
+                            async: false,
+                            success : function(data) {
+                            	if(data.result){
+                                    var txt="";
+                            		$.each(caseid,function(i,v){
+                            			txt+='<div class="case">';
+                            			//txt+='<p class="title">'+v+'</p>'
+                            			txt+='<p class="title">'+row.casenumber+"轮次结果详情"+'</p>'
+                            			$.each(data.data,function(si,sv){
+                            				if(i==sv.caseid){
+                                                txt+='<p class="step"><a href="javascript:;">'+sv.id+'、'+getstr(sv.casenode)+'</a><span class="hidden">'+JSON.stringify(sv)+'</span></p>';
+                            				}
+                            			})
+                            			txt+='</div>';
+                            		});
+                            		$('.data-view .left').empty();
+                            		$('.data-view .left').append(txt);
+                            		$('.data-view .left').find('.step:eq(0)').click();
+                                }else{
+	                                $('#tips').dialog({
+	                                    title:'提示',
+	                                    modal: true,
+	                                    open:function(){
+	                                        $(this).html("<p>"+data.msg+"</p>")
+	                                    },
+	                                    buttons:
+	                                    [
+	                                        {
+	                                            text: "确定",
+	                                            click: function(){
+	                                                $(this).dialog('close');
+	                                            }
+	                                        }
+	                                     ]   
+	                                })
+	                                $('#tips').dialog('open')
+                                }
+                            }
+                    	}) */
+                    }
+                })
+                $("#detail" ).dialog( "open" );
+            });
+            
+            /* $('#detail').on('click', '.step', function () {
+            	$(this).parents('.left').find('.checked').remove();
+            	$(this).append('<span class="checked glyphicon glyphicon-check"></span>');
+            	var detail=JSON.parse($(this).find('.hidden').text()),views='',style='';
+            	if(detail.status=='成功'){
+            		style='bg-success';
+            	}else{
+            		style='bg-danger';
+            	}
+            	views+='<p class="title">'+detail.casename+'<i class="glyphicon glyphicon-arrow-right" style="margin:0 5px;"></i>'+detail.casenode+'</p>';
+            	views+='<p class="subTitle"><span class="data '+style+'">'+detail.remark+'</span><span class="status '+style+'">'+detail.status+'</span></p>';
+            	views+='<div class="result"><p><span style="font-weight:bold;">测试结果：</span>'+detail.stepresult+'</p><p class="screenshot"><img src="/getImage?photopath='+encodeURI(detail.screenimagepath)+'"><p></div>';
+            	$('.data-view .right').empty();
+            	$('.data-view .right').append(views)
+            }) */
+        });
+        </script>
+
+    </body>
+</html>
